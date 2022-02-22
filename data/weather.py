@@ -1,7 +1,8 @@
 import debug
 import time
 import pyowm
-
+from pyowm.commons.exceptions import APIResponseError
+from pyowm.commons.exceptions import APIRequestError
 
 WEATHER_UPDATE_RATE = 10 * 60 # 10 minutes between weather updates
 
@@ -15,6 +16,7 @@ class Weather:
     self.speed_unit = "meters_sec" if metric else "miles_hour"
     self.starttime = time.time()
     self.client = pyowm.OWM(self.apikey)
+    self.mgr = self.client.weather_manager()
 
     self.temp       = None
     self.wind_speed = None
@@ -42,19 +44,19 @@ class Weather:
       if self.apikey_valid:
         debug.log("API Key hasn't been flagged as bad yet")
         try:
-          self.observation = self.client.weather_at_place(self.location)
-          weather = self.observation.get_weather()
-          self.temp = weather.get_temperature(self.temperature_unit).get('temp', -99)
-          self.wind_speed = weather.get_wind(self.speed_unit).get('speed', -9)
-          self.wind_dir = weather.get_wind(self.speed_unit).get('deg', 0)
-          self.conditions = weather.get_status()
-          self.icon_name = weather.get_weather_icon_name()
+          self.observation = self.mgr.weather_at_place(self.location)
+          weather = self.observation.weather
+          self.temp = weather.temperature(self.temperature_unit).get('temp', -99)
+          self.wind_speed = weather.wind(self.speed_unit).get('speed', -9)
+          self.wind_dir = weather.wind(self.speed_unit).get('deg', 0)
+          self.conditions = weather.status
+          self.icon_name = weather.weather_icon_name
           debug.log("Weather: {}; Wind: {}; {} ({})".format(self.temperature_string(), self.wind_string(), self.conditions, self.icon_filename()))
-        except pyowm.exceptions.api_response_error.UnauthorizedError:
+        except APIResponseError:
           debug.warning("[WEATHER] The API key provided doesn't appear to be valid. Please check your config.json.")
           debug.warning("[WEATHER] You can get a free API key by visiting https://home.openweathermap.org/users/sign_up")
           self.apikey_valid = False
-        except (pyowm.exceptions.api_call_error.APICallTimeoutError, pyowm.exceptions.api_call_error.APICallError, pyowm.exceptions.api_call_error.APIInvalidSSLCertificateError, pyowm.exceptions.api_call_error.BadGatewayError) as e:
+        except APIRequestError as e:
           debug.warning("[WEATHER] Fetching weather information failed from a connection issue.")
           debug.log("[WEATHER] Error Message: {}".format(e))
           # Set some placeholder weather info if this is our first weather update
