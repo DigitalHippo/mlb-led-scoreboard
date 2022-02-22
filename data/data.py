@@ -7,14 +7,16 @@ from data.status import Status
 from data.inning import Inning
 from data.weather import Weather
 from data.headlines import Headlines
-from urllib.error import URLError
 import urllib
 import data.layout
 import mlbgame
 import debug
 import time
 
-
+try:
+        from urllib2 import URLError
+except ImportError:
+        from urllib3.error import URLError
 
 NETWORK_RETRY_SLEEP_TIME = 10.0
 
@@ -81,7 +83,7 @@ class Data:
 
   def refresh_games(self):
     debug.log("Updating games for {}/{}/{}".format(self.month, self.day, self.year))
-    #urllib.urlcleanup()
+    urllib.request.urlcleanup()
     attempts_remaining = 5
     while attempts_remaining > 0:
       try:
@@ -113,7 +115,7 @@ class Data:
         time.sleep(NETWORK_RETRY_SLEEP_TIME)
 
   def refresh_overview(self):
-    #urllib.urlcleanup()
+    urllib.request.urlcleanup()
     attempts_remaining = 5
     while attempts_remaining > 0:
       try:
@@ -149,7 +151,7 @@ class Data:
   # Will use a network call to fetch the preferred team's game overview
   def fetch_preferred_team_overview(self):
     if not self.is_offday_for_preferred_team():
-      #urllib.urlcleanup()
+      urllib.request.urlcleanup()
       game = self.games[self.game_index_for_preferred_team()]
       game_overview = mlbgame.overview(game.game_id)
       debug.log("Preferred Team's Game Status: {}, {} {}".format(game_overview.status, game_overview.inning_state, game_overview.inning))
